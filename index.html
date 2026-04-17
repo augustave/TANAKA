@@ -3309,12 +3309,28 @@ function resetGraphPositions() {
   });
 }
 
+// Track if any node is hovered — freezes sim for easy clicking
+let anyNodeHover = false;
+// Cooling factor — sim energy decays over time so it settles
+let graphCoolness = 1.0;
+
 function simGraph() {
-  // Force simulation step
-  const k = 0.005; // attraction
-  const repulsion = 3000;
-  const damping = 0.82;
-  const centerPull = 0.008;
+  // Freeze completely when hovering — user needs a stable target
+  if (anyNodeHover) {
+    gNodes.forEach(n => { n.vx *= 0.5; n.vy *= 0.5; });
+    return;
+  }
+
+  // Scale all forces by coolness — sim gently settles over time
+  const cool = graphCoolness;
+  graphCoolness = Math.max(0.15, graphCoolness * 0.997);
+
+  // Force simulation step — much gentler now
+  const k = 0.0015 * cool;     // attraction (was 0.005)
+  const repulsion = 900 * cool; // was 3000
+  const damping = 0.72;         // stronger damping (was 0.82)
+  const centerPull = 0.004 * cool; // was 0.008
+  const maxVel = 1.8 * cool;   // hard cap on velocity
 
   // Repulsion between all nodes
   for (let i = 0; i < gNodes.length; i++) {
@@ -3336,19 +3352,25 @@ function simGraph() {
     const dx = e.target.x - e.source.x;
     const dy = e.target.y - e.source.y;
     const d = Math.sqrt(dx*dx + dy*dy);
-    const ideal = 90;
+    const ideal = 95;
     const f = (d - ideal) * k;
     const fx = dx/d * f, fy = dy/d * f;
     e.source.vx += fx; e.source.vy += fy;
     e.target.vx -= fx; e.target.vy -= fy;
   });
 
-  // Center gravity
+  // Center gravity + velocity cap + integration
   gNodes.forEach(n => {
     n.vx += (W/2 - n.x) * centerPull;
     n.vy += (H/2 - n.y) * centerPull;
     n.vx *= damping;
     n.vy *= damping;
+    // Cap velocity so nothing ever slingshots
+    const v = Math.sqrt(n.vx*n.vx + n.vy*n.vy);
+    if (v > maxVel) {
+      n.vx = n.vx / v * maxVel;
+      n.vy = n.vy / v * maxVel;
+    }
     n.x += n.vx;
     n.y += n.vy;
     // Bounds
@@ -3469,6 +3491,7 @@ document.querySelectorAll('#mode-bar button').forEach(btn => {
       particles.forEach(p => p.setMode(mode));
       if (mode === 'network') {
         resetGraphPositions();
+        graphCoolness = 1.0;
         particles.forEach(p => { p.targetAlpha = 0.04; });
       } else if (activeDesigner) {
         particles.forEach(p => {
@@ -3549,8 +3572,11 @@ canvas.addEventListener('mousemove', e => {
       const d = Math.hypot(n.x - mx, n.y - my);
       if (d < cnDist) { cnDist = d; closestNode = n; }
     });
-    if (closestNode && cnDist < closestNode.radius * 2.5) {
+    // Generous hit zone — node radius + 30px buffer, or 4x radius
+    const hitZone = closestNode ? Math.max(closestNode.radius * 4, closestNode.radius + 30) : 0;
+    if (closestNode && cnDist < hitZone) {
       closestNode.hover = true;
+      anyNodeHover = true;
       graphTooltip.style.display = 'block';
       graphTooltip.querySelector('.gt-title').textContent = closestNode.label;
       graphTooltip.querySelector('.gt-type').textContent = closestNode.type;
@@ -3561,12 +3587,14 @@ canvas.addEventListener('mousemove', e => {
       graphTooltip.style.left = gx + 'px';
       graphTooltip.style.top = gy + 'px';
     } else {
+      anyNodeHover = false;
       graphTooltip.style.display = 'none';
     }
     tooltip.style.display = 'none';
     return;
   }
   graphTooltip.style.display = 'none';
+  anyNodeHover = false;
 
   // Find closest particle
   let closest = null, closestDist = Infinity;
@@ -3624,7 +3652,10 @@ canvas.addEventListener('mousemove', e => {
 canvas.addEventListener('mouseleave', () => {
   mouseActive = false;
   tooltip.style.display = 'none';
+  graphTooltip.style.display = 'none';
+  anyNodeHover = false;
   particles.forEach(p => { p.hover = false; });
+  gNodes.forEach(n => { n.hover = false; });
 });
 
 // ─── Connection lines between nearby same-designer particles ───
