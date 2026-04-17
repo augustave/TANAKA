@@ -1,0 +1,3727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>永井 · 田中 · 福田 · 石岡</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#050505;font-family:'Inter',sans-serif}
+canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%;cursor:crosshair}
+
+/* Overlay UI */
+#ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+
+#title{
+  position:absolute;top:32px;left:40px;
+  color:rgba(255,255,255,0.5);
+  font-weight:200;font-size:13px;letter-spacing:0.2em;
+  text-transform:uppercase;
+  transition:opacity 0.6s;
+}
+#title .jp{
+  display:block;font-size:22px;letter-spacing:0.35em;
+  color:rgba(255,255,255,0.7);
+  margin-bottom:6px;font-weight:300;
+}
+
+#year-display{
+  position:absolute;bottom:40px;left:50%;transform:translateX(-50%);
+  font-size:120px;font-weight:200;
+  color:rgba(255,255,255,0.04);
+  letter-spacing:0.05em;
+  transition:color 0.3s;
+  user-select:none;
+}
+
+#designer-labels{
+  position:absolute;bottom:40px;left:40px;
+  display:flex;gap:28px;
+}
+#designer-labels .dl{
+  font-size:10px;letter-spacing:0.15em;text-transform:uppercase;
+  color:rgba(255,255,255,0.25);
+  transition:color 0.3s, transform 0.3s;
+  cursor:pointer;pointer-events:auto;
+}
+#designer-labels .dl:hover{color:rgba(255,255,255,0.7)}
+#designer-labels .dl.active{color:rgba(255,255,255,0.8);transform:translateY(-2px)}
+#designer-labels .dl .dot{
+  display:inline-block;width:6px;height:6px;border-radius:50%;
+  margin-right:6px;vertical-align:middle;
+  opacity:0.6;
+}
+
+#info{
+  position:absolute;top:32px;right:40px;
+  text-align:right;
+  color:rgba(255,255,255,0.3);
+  font-size:10px;letter-spacing:0.1em;
+  line-height:1.8;
+}
+
+#tooltip{
+  position:fixed;pointer-events:none;
+  padding:12px 16px;
+  background:rgba(8,8,8,0.92);
+  border:1px solid rgba(255,255,255,0.08);
+  backdrop-filter:blur(16px);
+  font-size:11px;color:#ccc;
+  z-index:20;display:none;
+  min-width:140px;
+}
+#tooltip .t-swatch{width:100%;height:40px;margin-bottom:8px;border:1px solid rgba(255,255,255,0.06)}
+#tooltip .t-hex{font-family:monospace;font-size:13px;color:#fff;letter-spacing:0.05em}
+#tooltip .t-meta{margin-top:4px;color:rgba(255,255,255,0.4);font-size:10px;letter-spacing:0.08em}
+#tooltip .t-symbol{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06);font-size:10px;line-height:1.6;color:rgba(255,255,255,0.5);max-width:220px}
+#tooltip .t-symbol .t-label{color:rgba(255,255,255,0.25);text-transform:uppercase;font-size:8px;letter-spacing:0.12em;margin-top:5px;display:block}
+#tooltip .t-symbol .t-label:first-child{margin-top:0}
+#tooltip .t-color-name{font-size:11px;color:rgba(255,255,255,0.65);letter-spacing:0.06em;margin-top:4px}
+
+#hint{
+  position:absolute;bottom:100px;left:50%;transform:translateX(-50%);
+  font-size:10px;letter-spacing:0.15em;color:rgba(255,255,255,0.15);
+  text-transform:uppercase;
+  animation:fadeHint 4s ease-in-out forwards;
+}
+@keyframes fadeHint{0%,60%{opacity:1}100%{opacity:0}}
+
+/* Mode toggle bar */
+#mode-bar{
+  position:fixed;top:32px;left:50%;transform:translateX(-50%);
+  display:flex;gap:2px;z-index:15;
+}
+#mode-bar button{
+  background:rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.08);
+  color:rgba(255,255,255,0.3);
+  padding:6px 18px;font-family:'Inter',sans-serif;
+  font-size:9px;letter-spacing:0.14em;text-transform:uppercase;
+  cursor:pointer;transition:all 0.3s;
+}
+#mode-bar button:first-child{border-radius:3px 0 0 3px}
+#mode-bar button:last-child{border-radius:0 3px 3px 0}
+#mode-bar button.active{
+  background:rgba(255,255,255,0.08);
+  border-color:rgba(255,255,255,0.2);
+  color:rgba(255,255,255,0.8);
+}
+#mode-bar button:hover{color:rgba(255,255,255,0.6);border-color:rgba(255,255,255,0.15)}
+
+/* Graph tooltip */
+#graph-tooltip{
+  position:fixed;pointer-events:none;
+  padding:10px 14px;
+  background:rgba(8,8,8,0.94);
+  border:1px solid rgba(255,255,255,0.1);
+  backdrop-filter:blur(16px);
+  font-size:10px;color:rgba(255,255,255,0.7);
+  z-index:25;display:none;
+  max-width:250px;line-height:1.6;
+  letter-spacing:0.04em;
+}
+#graph-tooltip .gt-title{font-size:12px;color:#fff;font-weight:400;letter-spacing:0.06em}
+#graph-tooltip .gt-type{color:rgba(255,255,255,0.3);font-size:9px;text-transform:uppercase;letter-spacing:0.12em;margin-top:2px}
+#graph-tooltip .gt-context{margin-top:6px;color:rgba(255,255,255,0.5)}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div id="ui">
+  <div id="title">
+    <span class="jp">永井 · 田中 · 福田 · 石岡</span>
+    Color through time — 1960–1993
+  </div>
+  <div id="year-display"></div>
+  <div id="designer-labels"></div>
+  <div id="info">
+    178 colors<br>
+    4 designers<br>
+    33 years
+  </div>
+  <div id="hint">Move to explore · Click designer names to isolate</div>
+</div>
+
+<div id="mode-bar">
+  <button class="active" data-mode="orbital">Orbital</button>
+  <button data-mode="timeline">Timeline</button>
+  <button data-mode="network">Network</button>
+</div>
+
+<div id="graph-tooltip">
+  <div class="gt-title"></div>
+  <div class="gt-type"></div>
+  <div class="gt-context"></div>
+</div>
+
+<div id="tooltip">
+  <div class="t-swatch"></div>
+  <div class="t-hex"></div>
+  <div class="t-color-name"></div>
+  <div class="t-meta"></div>
+  <div class="t-symbol"></div>
+</div>
+
+<script>
+// ─── Data ───
+const PALETTE_DATA = {
+  "source_image": "Take Nakano 中野豪雄.jpeg",
+  "image_size": {
+    "w": 736,
+    "h": 1040
+  },
+  "coordinate_system": {
+    "x": "normalized 0-1 across poster width",
+    "y": "normalized 0-1 top-to-bottom (full image)",
+    "x_px/y_px": "pixel coordinates in source image",
+    "columns": {
+      "nagai": 0.3,
+      "tanaka": 0.47,
+      "fukuda": 0.68,
+      "ishioka": 0.88
+    }
+  },
+  "summary_by_designer": {
+    "nagai": {
+      "count": 54,
+      "dominant_hues": [
+        "#0B0404",
+        "#17171A",
+        "#A9AAA7",
+        "#766449",
+        "#35302D",
+        "#EE8E42"
+      ]
+    },
+    "tanaka": {
+      "count": 22,
+      "dominant_hues": [
+        "#060402",
+        "#29282A",
+        "#342D26",
+        "#2C312A",
+        "#BAB4A2",
+        "#A79E8F"
+      ]
+    },
+    "fukuda": {
+      "count": 41,
+      "dominant_hues": [
+        "#070403",
+        "#D5D6D4",
+        "#CFCFCF",
+        "#B51A21",
+        "#E7D4D2",
+        "#D3CFCF"
+      ]
+    },
+    "ishioka": {
+      "count": 61,
+      "dominant_hues": [
+        "#2F261D",
+        "#241F1E",
+        "#3F3A2F",
+        "#1A1915",
+        "#574737",
+        "#3E2C20"
+      ]
+    }
+  },
+  "palette": [
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.0317,
+      "x_px": 220,
+      "y_px": 33,
+      "height_px": 12,
+      "hex": "#0B0404",
+      "rgb": [
+        11,
+        4,
+        4
+      ],
+      "approx_year": 1960
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.0447,
+      "x_px": 220,
+      "y_px": 46,
+      "height_px": 9,
+      "hex": "#AF2325",
+      "rgb": [
+        175,
+        35,
+        37
+      ],
+      "approx_year": 1961
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.0683,
+      "x_px": 220,
+      "y_px": 71,
+      "height_px": 8,
+      "hex": "#B83A2E",
+      "rgb": [
+        184,
+        58,
+        46
+      ],
+      "approx_year": 1961
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.0774,
+      "x_px": 220,
+      "y_px": 80,
+      "height_px": 5,
+      "hex": "#1E5C92",
+      "rgb": [
+        30,
+        92,
+        146
+      ],
+      "approx_year": 1962
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.101,
+      "x_px": 220,
+      "y_px": 105,
+      "height_px": 8,
+      "hex": "#766449",
+      "rgb": [
+        118,
+        100,
+        73
+      ],
+      "approx_year": 1963
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.1187,
+      "x_px": 220,
+      "y_px": 123,
+      "height_px": 11,
+      "hex": "#A13D28",
+      "rgb": [
+        161,
+        61,
+        40
+      ],
+      "approx_year": 1963
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.1279,
+      "x_px": 220,
+      "y_px": 133,
+      "height_px": 6,
+      "hex": "#856637",
+      "rgb": [
+        133,
+        102,
+        55
+      ],
+      "approx_year": 1964
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.1361,
+      "x_px": 220,
+      "y_px": 141,
+      "height_px": 5,
+      "hex": "#7D694E",
+      "rgb": [
+        125,
+        105,
+        78
+      ],
+      "approx_year": 1964
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.1462,
+      "x_px": 220,
+      "y_px": 152,
+      "height_px": 10,
+      "hex": "#35302D",
+      "rgb": [
+        53,
+        48,
+        45
+      ],
+      "approx_year": 1964
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.1558,
+      "x_px": 220,
+      "y_px": 162,
+      "height_px": 4,
+      "hex": "#C13636",
+      "rgb": [
+        193,
+        54,
+        54
+      ],
+      "approx_year": 1965
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.1832,
+      "x_px": 220,
+      "y_px": 190,
+      "height_px": 15,
+      "hex": "#060508",
+      "rgb": [
+        6,
+        5,
+        8
+      ],
+      "approx_year": 1965
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.2034,
+      "x_px": 220,
+      "y_px": 211,
+      "height_px": 15,
+      "hex": "#080403",
+      "rgb": [
+        8,
+        4,
+        3
+      ],
+      "approx_year": 1966
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.2375,
+      "x_px": 220,
+      "y_px": 247,
+      "height_px": 12,
+      "hex": "#060503",
+      "rgb": [
+        6,
+        5,
+        3
+      ],
+      "approx_year": 1967
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.2856,
+      "x_px": 220,
+      "y_px": 297,
+      "height_px": 4,
+      "hex": "#060203",
+      "rgb": [
+        6,
+        2,
+        3
+      ],
+      "approx_year": 1969
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.2957,
+      "x_px": 220,
+      "y_px": 307,
+      "height_px": 7,
+      "hex": "#223562",
+      "rgb": [
+        34,
+        53,
+        98
+      ],
+      "approx_year": 1970
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.325,
+      "x_px": 220,
+      "y_px": 338,
+      "height_px": 6,
+      "hex": "#0A0B0A",
+      "rgb": [
+        10,
+        11,
+        10
+      ],
+      "approx_year": 1971
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.3399,
+      "x_px": 220,
+      "y_px": 353,
+      "height_px": 13,
+      "hex": "#235597",
+      "rgb": [
+        35,
+        85,
+        151
+      ],
+      "approx_year": 1971
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.3514,
+      "x_px": 220,
+      "y_px": 365,
+      "height_px": 5,
+      "hex": "#ADA967",
+      "rgb": [
+        173,
+        169,
+        103
+      ],
+      "approx_year": 1972
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.3572,
+      "x_px": 220,
+      "y_px": 371,
+      "height_px": 3,
+      "hex": "#435B3D",
+      "rgb": [
+        67,
+        91,
+        61
+      ],
+      "approx_year": 1972
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.363,
+      "x_px": 220,
+      "y_px": 377,
+      "height_px": 3,
+      "hex": "#5387A4",
+      "rgb": [
+        83,
+        135,
+        164
+      ],
+      "approx_year": 1972
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.3909,
+      "x_px": 220,
+      "y_px": 406,
+      "height_px": 11,
+      "hex": "#872026",
+      "rgb": [
+        135,
+        32,
+        38
+      ],
+      "approx_year": 1973
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.4115,
+      "x_px": 220,
+      "y_px": 428,
+      "height_px": 4,
+      "hex": "#3C484C",
+      "rgb": [
+        60,
+        72,
+        76
+      ],
+      "approx_year": 1974
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.4197,
+      "x_px": 220,
+      "y_px": 436,
+      "height_px": 11,
+      "hex": "#17171A",
+      "rgb": [
+        23,
+        23,
+        26
+      ],
+      "approx_year": 1974
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.4351,
+      "x_px": 220,
+      "y_px": 452,
+      "height_px": 3,
+      "hex": "#AC7049",
+      "rgb": [
+        172,
+        112,
+        73
+      ],
+      "approx_year": 1975
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.4399,
+      "x_px": 220,
+      "y_px": 457,
+      "height_px": 5,
+      "hex": "#715430",
+      "rgb": [
+        113,
+        84,
+        48
+      ],
+      "approx_year": 1975
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.4486,
+      "x_px": 220,
+      "y_px": 466,
+      "height_px": 3,
+      "hex": "#30342D",
+      "rgb": [
+        48,
+        52,
+        45
+      ],
+      "approx_year": 1975
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.4562,
+      "x_px": 220,
+      "y_px": 474,
+      "height_px": 3,
+      "hex": "#363A40",
+      "rgb": [
+        54,
+        58,
+        64
+      ],
+      "approx_year": 1975
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.4635,
+      "x_px": 220,
+      "y_px": 482,
+      "height_px": 6,
+      "hex": "#1E1B1B",
+      "rgb": [
+        30,
+        27,
+        27
+      ],
+      "approx_year": 1976
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.4841,
+      "x_px": 220,
+      "y_px": 503,
+      "height_px": 11,
+      "hex": "#090706",
+      "rgb": [
+        9,
+        7,
+        6
+      ],
+      "approx_year": 1976
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.5038,
+      "x_px": 220,
+      "y_px": 524,
+      "height_px": 10,
+      "hex": "#151210",
+      "rgb": [
+        21,
+        18,
+        16
+      ],
+      "approx_year": 1977
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.5245,
+      "x_px": 220,
+      "y_px": 545,
+      "height_px": 3,
+      "hex": "#5C3244",
+      "rgb": [
+        92,
+        50,
+        68
+      ],
+      "approx_year": 1978
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.5514,
+      "x_px": 220,
+      "y_px": 573,
+      "height_px": 3,
+      "hex": "#66676E",
+      "rgb": [
+        102,
+        103,
+        110
+      ],
+      "approx_year": 1979
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.5582,
+      "x_px": 220,
+      "y_px": 580,
+      "height_px": 9,
+      "hex": "#2C2A2C",
+      "rgb": [
+        44,
+        42,
+        44
+      ],
+      "approx_year": 1979
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.5726,
+      "x_px": 220,
+      "y_px": 595,
+      "height_px": 3,
+      "hex": "#ABBCBB",
+      "rgb": [
+        171,
+        188,
+        187
+      ],
+      "approx_year": 1979
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.5933,
+      "x_px": 220,
+      "y_px": 617,
+      "height_px": 10,
+      "hex": "#A8ABB0",
+      "rgb": [
+        168,
+        171,
+        176
+      ],
+      "approx_year": 1980
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.6115,
+      "x_px": 220,
+      "y_px": 636,
+      "height_px": 8,
+      "hex": "#1A5A3E",
+      "rgb": [
+        26,
+        90,
+        62
+      ],
+      "approx_year": 1981
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.637,
+      "x_px": 220,
+      "y_px": 662,
+      "height_px": 5,
+      "hex": "#A9AAA7",
+      "rgb": [
+        169,
+        170,
+        167
+      ],
+      "approx_year": 1982
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.6764,
+      "x_px": 220,
+      "y_px": 703,
+      "height_px": 9,
+      "hex": "#070609",
+      "rgb": [
+        7,
+        6,
+        9
+      ],
+      "approx_year": 1983
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.6947,
+      "x_px": 220,
+      "y_px": 722,
+      "height_px": 11,
+      "hex": "#9E959E",
+      "rgb": [
+        158,
+        149,
+        158
+      ],
+      "approx_year": 1984
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.713,
+      "x_px": 220,
+      "y_px": 741,
+      "height_px": 13,
+      "hex": "#8F8F93",
+      "rgb": [
+        143,
+        143,
+        147
+      ],
+      "approx_year": 1984
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.7346,
+      "x_px": 220,
+      "y_px": 764,
+      "height_px": 12,
+      "hex": "#0A0303",
+      "rgb": [
+        10,
+        3,
+        3
+      ],
+      "approx_year": 1985
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.7514,
+      "x_px": 220,
+      "y_px": 781,
+      "height_px": 11,
+      "hex": "#B7B8AD",
+      "rgb": [
+        183,
+        184,
+        173
+      ],
+      "approx_year": 1986
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.7692,
+      "x_px": 220,
+      "y_px": 800,
+      "height_px": 14,
+      "hex": "#EDDC72",
+      "rgb": [
+        237,
+        220,
+        114
+      ],
+      "approx_year": 1987
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.7784,
+      "x_px": 220,
+      "y_px": 809,
+      "height_px": 3,
+      "hex": "#0E0C04",
+      "rgb": [
+        14,
+        12,
+        4
+      ],
+      "approx_year": 1987
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.7894,
+      "x_px": 220,
+      "y_px": 821,
+      "height_px": 14,
+      "hex": "#EFDC6E",
+      "rgb": [
+        239,
+        220,
+        110
+      ],
+      "approx_year": 1987
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.8087,
+      "x_px": 220,
+      "y_px": 841,
+      "height_px": 12,
+      "hex": "#EE8E42",
+      "rgb": [
+        238,
+        142,
+        66
+      ],
+      "approx_year": 1988
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.8284,
+      "x_px": 220,
+      "y_px": 861,
+      "height_px": 15,
+      "hex": "#ED8F42",
+      "rgb": [
+        237,
+        143,
+        66
+      ],
+      "approx_year": 1989
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.8558,
+      "x_px": 220,
+      "y_px": 890,
+      "height_px": 8,
+      "hex": "#0A0707",
+      "rgb": [
+        10,
+        7,
+        7
+      ],
+      "approx_year": 1990
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.8683,
+      "x_px": 220,
+      "y_px": 903,
+      "height_px": 10,
+      "hex": "#ACABA5",
+      "rgb": [
+        172,
+        171,
+        165
+      ],
+      "approx_year": 1990
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.8774,
+      "x_px": 220,
+      "y_px": 912,
+      "height_px": 5,
+      "hex": "#0C0808",
+      "rgb": [
+        12,
+        8,
+        8
+      ],
+      "approx_year": 1990
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.8913,
+      "x_px": 220,
+      "y_px": 927,
+      "height_px": 12,
+      "hex": "#B2AFA7",
+      "rgb": [
+        178,
+        175,
+        167
+      ],
+      "approx_year": 1991
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.9091,
+      "x_px": 220,
+      "y_px": 945,
+      "height_px": 9,
+      "hex": "#ABAFA9",
+      "rgb": [
+        171,
+        175,
+        169
+      ],
+      "approx_year": 1992
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.9173,
+      "x_px": 220,
+      "y_px": 954,
+      "height_px": 4,
+      "hex": "#060304",
+      "rgb": [
+        6,
+        3,
+        4
+      ],
+      "approx_year": 1992
+    },
+    {
+      "designer": "nagai",
+      "x": 0.3,
+      "y": 0.9317,
+      "x_px": 220,
+      "y_px": 969,
+      "height_px": 16,
+      "hex": "#060403",
+      "rgb": [
+        6,
+        4,
+        3
+      ],
+      "approx_year": 1992
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.051,
+      "x_px": 345,
+      "y_px": 53,
+      "height_px": 14,
+      "hex": "#060402",
+      "rgb": [
+        6,
+        4,
+        2
+      ],
+      "approx_year": 1961
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.387,
+      "x_px": 345,
+      "y_px": 402,
+      "height_px": 3,
+      "hex": "#342D26",
+      "rgb": [
+        52,
+        45,
+        38
+      ],
+      "approx_year": 1973
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.399,
+      "x_px": 345,
+      "y_px": 415,
+      "height_px": 10,
+      "hex": "#29282A",
+      "rgb": [
+        41,
+        40,
+        42
+      ],
+      "approx_year": 1973
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.4976,
+      "x_px": 345,
+      "y_px": 517,
+      "height_px": 3,
+      "hex": "#2C312A",
+      "rgb": [
+        44,
+        49,
+        42
+      ],
+      "approx_year": 1977
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.5053,
+      "x_px": 345,
+      "y_px": 525,
+      "height_px": 5,
+      "hex": "#2D282A",
+      "rgb": [
+        45,
+        40,
+        42
+      ],
+      "approx_year": 1977
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.513,
+      "x_px": 345,
+      "y_px": 533,
+      "height_px": 3,
+      "hex": "#BAB4A2",
+      "rgb": [
+        186,
+        180,
+        162
+      ],
+      "approx_year": 1977
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.5255,
+      "x_px": 345,
+      "y_px": 546,
+      "height_px": 5,
+      "hex": "#0C0C0B",
+      "rgb": [
+        12,
+        12,
+        11
+      ],
+      "approx_year": 1978
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.575,
+      "x_px": 345,
+      "y_px": 598,
+      "height_px": 12,
+      "hex": "#A79E8F",
+      "rgb": [
+        167,
+        158,
+        143
+      ],
+      "approx_year": 1980
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.6365,
+      "x_px": 345,
+      "y_px": 662,
+      "height_px": 4,
+      "hex": "#4B5C85",
+      "rgb": [
+        75,
+        92,
+        133
+      ],
+      "approx_year": 1982
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.6462,
+      "x_px": 345,
+      "y_px": 672,
+      "height_px": 4,
+      "hex": "#0A0A08",
+      "rgb": [
+        10,
+        10,
+        8
+      ],
+      "approx_year": 1982
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.6606,
+      "x_px": 345,
+      "y_px": 687,
+      "height_px": 16,
+      "hex": "#ADA7A8",
+      "rgb": [
+        173,
+        167,
+        168
+      ],
+      "approx_year": 1983
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.6966,
+      "x_px": 345,
+      "y_px": 724,
+      "height_px": 13,
+      "hex": "#DC9145",
+      "rgb": [
+        220,
+        145,
+        69
+      ],
+      "approx_year": 1984
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.7058,
+      "x_px": 345,
+      "y_px": 734,
+      "height_px": 4,
+      "hex": "#695321",
+      "rgb": [
+        105,
+        83,
+        33
+      ],
+      "approx_year": 1984
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.726,
+      "x_px": 345,
+      "y_px": 755,
+      "height_px": 4,
+      "hex": "#060303",
+      "rgb": [
+        6,
+        3,
+        3
+      ],
+      "approx_year": 1985
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.7466,
+      "x_px": 345,
+      "y_px": 776,
+      "height_px": 3,
+      "hex": "#070304",
+      "rgb": [
+        7,
+        3,
+        4
+      ],
+      "approx_year": 1986
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.7606,
+      "x_px": 345,
+      "y_px": 791,
+      "height_px": 14,
+      "hex": "#080406",
+      "rgb": [
+        8,
+        4,
+        6
+      ],
+      "approx_year": 1986
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.7851,
+      "x_px": 345,
+      "y_px": 816,
+      "height_px": 5,
+      "hex": "#030505",
+      "rgb": [
+        3,
+        5,
+        5
+      ],
+      "approx_year": 1987
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.7923,
+      "x_px": 345,
+      "y_px": 824,
+      "height_px": 4,
+      "hex": "#56527C",
+      "rgb": [
+        86,
+        82,
+        124
+      ],
+      "approx_year": 1987
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.8187,
+      "x_px": 345,
+      "y_px": 851,
+      "height_px": 11,
+      "hex": "#7F7A71",
+      "rgb": [
+        127,
+        122,
+        113
+      ],
+      "approx_year": 1988
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.8264,
+      "x_px": 345,
+      "y_px": 859,
+      "height_px": 3,
+      "hex": "#656453",
+      "rgb": [
+        101,
+        100,
+        83
+      ],
+      "approx_year": 1989
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.8423,
+      "x_px": 345,
+      "y_px": 876,
+      "height_px": 10,
+      "hex": "#080304",
+      "rgb": [
+        8,
+        3,
+        4
+      ],
+      "approx_year": 1989
+    },
+    {
+      "designer": "tanaka",
+      "x": 0.47,
+      "y": 0.9058,
+      "x_px": 345,
+      "y_px": 942,
+      "height_px": 4,
+      "hex": "#060606",
+      "rgb": [
+        6,
+        6,
+        6
+      ],
+      "approx_year": 1991
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.0889,
+      "x_px": 500,
+      "y_px": 92,
+      "height_px": 13,
+      "hex": "#070403",
+      "rgb": [
+        7,
+        4,
+        3
+      ],
+      "approx_year": 1962
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.099,
+      "x_px": 500,
+      "y_px": 103,
+      "height_px": 4,
+      "hex": "#D5D6D4",
+      "rgb": [
+        213,
+        214,
+        212
+      ],
+      "approx_year": 1962
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.1125,
+      "x_px": 500,
+      "y_px": 117,
+      "height_px": 8,
+      "hex": "#CFCFCF",
+      "rgb": [
+        207,
+        207,
+        207
+      ],
+      "approx_year": 1963
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.124,
+      "x_px": 500,
+      "y_px": 129,
+      "height_px": 4,
+      "hex": "#D9D5D9",
+      "rgb": [
+        217,
+        213,
+        217
+      ],
+      "approx_year": 1963
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.1591,
+      "x_px": 500,
+      "y_px": 165,
+      "height_px": 5,
+      "hex": "#B51A21",
+      "rgb": [
+        181,
+        26,
+        33
+      ],
+      "approx_year": 1965
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.1827,
+      "x_px": 500,
+      "y_px": 190,
+      "height_px": 6,
+      "hex": "#7E2365",
+      "rgb": [
+        126,
+        35,
+        101
+      ],
+      "approx_year": 1965
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.188,
+      "x_px": 500,
+      "y_px": 195,
+      "height_px": 3,
+      "hex": "#9A1E3C",
+      "rgb": [
+        154,
+        30,
+        60
+      ],
+      "approx_year": 1966
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.2029,
+      "x_px": 500,
+      "y_px": 211,
+      "height_px": 8,
+      "hex": "#48295E",
+      "rgb": [
+        72,
+        41,
+        94
+      ],
+      "approx_year": 1966
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.2255,
+      "x_px": 500,
+      "y_px": 234,
+      "height_px": 15,
+      "hex": "#0F2C49",
+      "rgb": [
+        15,
+        44,
+        73
+      ],
+      "approx_year": 1967
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.2519,
+      "x_px": 500,
+      "y_px": 262,
+      "height_px": 14,
+      "hex": "#060402",
+      "rgb": [
+        6,
+        4,
+        2
+      ],
+      "approx_year": 1968
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.2649,
+      "x_px": 500,
+      "y_px": 275,
+      "height_px": 3,
+      "hex": "#484D71",
+      "rgb": [
+        72,
+        77,
+        113
+      ],
+      "approx_year": 1968
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.2856,
+      "x_px": 500,
+      "y_px": 297,
+      "height_px": 4,
+      "hex": "#E7D4D2",
+      "rgb": [
+        231,
+        212,
+        210
+      ],
+      "approx_year": 1969
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.3043,
+      "x_px": 500,
+      "y_px": 316,
+      "height_px": 17,
+      "hex": "#CFDADD",
+      "rgb": [
+        207,
+        218,
+        221
+      ],
+      "approx_year": 1970
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.3183,
+      "x_px": 500,
+      "y_px": 331,
+      "height_px": 6,
+      "hex": "#D3CFCF",
+      "rgb": [
+        211,
+        207,
+        207
+      ],
+      "approx_year": 1970
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.3303,
+      "x_px": 500,
+      "y_px": 343,
+      "height_px": 13,
+      "hex": "#D4D6DD",
+      "rgb": [
+        212,
+        214,
+        221
+      ],
+      "approx_year": 1971
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.3466,
+      "x_px": 500,
+      "y_px": 360,
+      "height_px": 7,
+      "hex": "#E0D1D0",
+      "rgb": [
+        224,
+        209,
+        208
+      ],
+      "approx_year": 1971
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.3683,
+      "x_px": 500,
+      "y_px": 383,
+      "height_px": 12,
+      "hex": "#ECE9CF",
+      "rgb": [
+        236,
+        233,
+        207
+      ],
+      "approx_year": 1972
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.3837,
+      "x_px": 500,
+      "y_px": 399,
+      "height_px": 16,
+      "hex": "#D9D8D6",
+      "rgb": [
+        217,
+        216,
+        214
+      ],
+      "approx_year": 1973
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.4072,
+      "x_px": 500,
+      "y_px": 423,
+      "height_px": 9,
+      "hex": "#E4CFD0",
+      "rgb": [
+        228,
+        207,
+        208
+      ],
+      "approx_year": 1974
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.4183,
+      "x_px": 500,
+      "y_px": 435,
+      "height_px": 4,
+      "hex": "#CDCCCC",
+      "rgb": [
+        205,
+        204,
+        204
+      ],
+      "approx_year": 1974
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.4519,
+      "x_px": 500,
+      "y_px": 470,
+      "height_px": 10,
+      "hex": "#111F3A",
+      "rgb": [
+        17,
+        31,
+        58
+      ],
+      "approx_year": 1975
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.474,
+      "x_px": 500,
+      "y_px": 493,
+      "height_px": 10,
+      "hex": "#4B4A89",
+      "rgb": [
+        75,
+        74,
+        137
+      ],
+      "approx_year": 1976
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.4971,
+      "x_px": 500,
+      "y_px": 517,
+      "height_px": 18,
+      "hex": "#DBCECF",
+      "rgb": [
+        219,
+        206,
+        207
+      ],
+      "approx_year": 1977
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.5192,
+      "x_px": 500,
+      "y_px": 540,
+      "height_px": 12,
+      "hex": "#B21D24",
+      "rgb": [
+        178,
+        29,
+        36
+      ],
+      "approx_year": 1978
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.5288,
+      "x_px": 500,
+      "y_px": 550,
+      "height_px": 4,
+      "hex": "#0F0104",
+      "rgb": [
+        15,
+        1,
+        4
+      ],
+      "approx_year": 1978
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.5341,
+      "x_px": 500,
+      "y_px": 555,
+      "height_px": 3,
+      "hex": "#D4D3D1",
+      "rgb": [
+        212,
+        211,
+        209
+      ],
+      "approx_year": 1978
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.5692,
+      "x_px": 500,
+      "y_px": 592,
+      "height_px": 16,
+      "hex": "#080304",
+      "rgb": [
+        8,
+        3,
+        4
+      ],
+      "approx_year": 1979
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.5952,
+      "x_px": 500,
+      "y_px": 619,
+      "height_px": 4,
+      "hex": "#070606",
+      "rgb": [
+        7,
+        6,
+        6
+      ],
+      "approx_year": 1980
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.6115,
+      "x_px": 500,
+      "y_px": 636,
+      "height_px": 10,
+      "hex": "#070304",
+      "rgb": [
+        7,
+        3,
+        4
+      ],
+      "approx_year": 1981
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.6346,
+      "x_px": 500,
+      "y_px": 660,
+      "height_px": 4,
+      "hex": "#020202",
+      "rgb": [
+        2,
+        2,
+        2
+      ],
+      "approx_year": 1982
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.651,
+      "x_px": 500,
+      "y_px": 677,
+      "height_px": 10,
+      "hex": "#050403",
+      "rgb": [
+        5,
+        4,
+        3
+      ],
+      "approx_year": 1982
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.6745,
+      "x_px": 500,
+      "y_px": 701,
+      "height_px": 3,
+      "hex": "#020202",
+      "rgb": [
+        2,
+        2,
+        2
+      ],
+      "approx_year": 1983
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.7135,
+      "x_px": 500,
+      "y_px": 742,
+      "height_px": 4,
+      "hex": "#060506",
+      "rgb": [
+        6,
+        5,
+        6
+      ],
+      "approx_year": 1985
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.7322,
+      "x_px": 500,
+      "y_px": 761,
+      "height_px": 7,
+      "hex": "#060304",
+      "rgb": [
+        6,
+        3,
+        4
+      ],
+      "approx_year": 1985
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.8115,
+      "x_px": 500,
+      "y_px": 844,
+      "height_px": 6,
+      "hex": "#D1D0D0",
+      "rgb": [
+        209,
+        208,
+        208
+      ],
+      "approx_year": 1988
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.8245,
+      "x_px": 500,
+      "y_px": 857,
+      "height_px": 3,
+      "hex": "#303A6F",
+      "rgb": [
+        48,
+        58,
+        111
+      ],
+      "approx_year": 1988
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.8668,
+      "x_px": 500,
+      "y_px": 901,
+      "height_px": 17,
+      "hex": "#D2D2D2",
+      "rgb": [
+        210,
+        210,
+        210
+      ],
+      "approx_year": 1990
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.8918,
+      "x_px": 500,
+      "y_px": 927,
+      "height_px": 5,
+      "hex": "#070505",
+      "rgb": [
+        7,
+        5,
+        5
+      ],
+      "approx_year": 1991
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.9154,
+      "x_px": 500,
+      "y_px": 952,
+      "height_px": 10,
+      "hex": "#E0B41E",
+      "rgb": [
+        224,
+        180,
+        30
+      ],
+      "approx_year": 1992
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.926,
+      "x_px": 500,
+      "y_px": 963,
+      "height_px": 4,
+      "hex": "#040402",
+      "rgb": [
+        4,
+        4,
+        2
+      ],
+      "approx_year": 1992
+    },
+    {
+      "designer": "fukuda",
+      "x": 0.68,
+      "y": 0.9385,
+      "x_px": 500,
+      "y_px": 976,
+      "height_px": 16,
+      "hex": "#6FABBD",
+      "rgb": [
+        111,
+        171,
+        189
+      ],
+      "approx_year": 1993
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.1091,
+      "x_px": 647,
+      "y_px": 113,
+      "height_px": 7,
+      "hex": "#1F678E",
+      "rgb": [
+        31,
+        103,
+        142
+      ],
+      "approx_year": 1963
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.1168,
+      "x_px": 647,
+      "y_px": 121,
+      "height_px": 7,
+      "hex": "#1C4D52",
+      "rgb": [
+        28,
+        77,
+        82
+      ],
+      "approx_year": 1963
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.1351,
+      "x_px": 647,
+      "y_px": 140,
+      "height_px": 13,
+      "hex": "#D1D1D1",
+      "rgb": [
+        209,
+        209,
+        209
+      ],
+      "approx_year": 1964
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.1639,
+      "x_px": 647,
+      "y_px": 170,
+      "height_px": 5,
+      "hex": "#8B232A",
+      "rgb": [
+        139,
+        35,
+        42
+      ],
+      "approx_year": 1965
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.1861,
+      "x_px": 647,
+      "y_px": 193,
+      "height_px": 5,
+      "hex": "#26528A",
+      "rgb": [
+        38,
+        82,
+        138
+      ],
+      "approx_year": 1966
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.2053,
+      "x_px": 647,
+      "y_px": 213,
+      "height_px": 5,
+      "hex": "#17559F",
+      "rgb": [
+        23,
+        85,
+        159
+      ],
+      "approx_year": 1966
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.2476,
+      "x_px": 647,
+      "y_px": 257,
+      "height_px": 3,
+      "hex": "#463733",
+      "rgb": [
+        70,
+        55,
+        51
+      ],
+      "approx_year": 1968
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.2591,
+      "x_px": 647,
+      "y_px": 269,
+      "height_px": 3,
+      "hex": "#3F3A2F",
+      "rgb": [
+        63,
+        58,
+        47
+      ],
+      "approx_year": 1968
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.2659,
+      "x_px": 647,
+      "y_px": 276,
+      "height_px": 7,
+      "hex": "#5C3328",
+      "rgb": [
+        92,
+        51,
+        40
+      ],
+      "approx_year": 1968
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.275,
+      "x_px": 647,
+      "y_px": 286,
+      "height_px": 10,
+      "hex": "#1A1915",
+      "rgb": [
+        26,
+        25,
+        21
+      ],
+      "approx_year": 1969
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.2861,
+      "x_px": 647,
+      "y_px": 297,
+      "height_px": 7,
+      "hex": "#A37845",
+      "rgb": [
+        163,
+        120,
+        69
+      ],
+      "approx_year": 1969
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.2966,
+      "x_px": 647,
+      "y_px": 308,
+      "height_px": 7,
+      "hex": "#2F261D",
+      "rgb": [
+        47,
+        38,
+        29
+      ],
+      "approx_year": 1970
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.3072,
+      "x_px": 647,
+      "y_px": 319,
+      "height_px": 11,
+      "hex": "#43312A",
+      "rgb": [
+        67,
+        49,
+        42
+      ],
+      "approx_year": 1970
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.3173,
+      "x_px": 647,
+      "y_px": 330,
+      "height_px": 6,
+      "hex": "#2C261E",
+      "rgb": [
+        44,
+        38,
+        30
+      ],
+      "approx_year": 1970
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.3274,
+      "x_px": 647,
+      "y_px": 340,
+      "height_px": 9,
+      "hex": "#925539",
+      "rgb": [
+        146,
+        85,
+        57
+      ],
+      "approx_year": 1971
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.3365,
+      "x_px": 647,
+      "y_px": 350,
+      "height_px": 8,
+      "hex": "#574737",
+      "rgb": [
+        87,
+        71,
+        55
+      ],
+      "approx_year": 1971
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.3438,
+      "x_px": 647,
+      "y_px": 357,
+      "height_px": 3,
+      "hex": "#906E4B",
+      "rgb": [
+        144,
+        110,
+        75
+      ],
+      "approx_year": 1971
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.3577,
+      "x_px": 647,
+      "y_px": 372,
+      "height_px": 4,
+      "hex": "#241F1E",
+      "rgb": [
+        36,
+        31,
+        30
+      ],
+      "approx_year": 1972
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.3683,
+      "x_px": 647,
+      "y_px": 383,
+      "height_px": 4,
+      "hex": "#8D6C5D",
+      "rgb": [
+        141,
+        108,
+        93
+      ],
+      "approx_year": 1972
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.3745,
+      "x_px": 647,
+      "y_px": 389,
+      "height_px": 3,
+      "hex": "#605D5B",
+      "rgb": [
+        96,
+        93,
+        91
+      ],
+      "approx_year": 1972
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.3846,
+      "x_px": 647,
+      "y_px": 400,
+      "height_px": 8,
+      "hex": "#A58F7D",
+      "rgb": [
+        165,
+        143,
+        125
+      ],
+      "approx_year": 1973
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.4096,
+      "x_px": 647,
+      "y_px": 426,
+      "height_px": 4,
+      "hex": "#CED1CD",
+      "rgb": [
+        206,
+        209,
+        205
+      ],
+      "approx_year": 1974
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.4264,
+      "x_px": 647,
+      "y_px": 443,
+      "height_px": 9,
+      "hex": "#DA757D",
+      "rgb": [
+        218,
+        117,
+        125
+      ],
+      "approx_year": 1974
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.438,
+      "x_px": 647,
+      "y_px": 455,
+      "height_px": 3,
+      "hex": "#3E2C20",
+      "rgb": [
+        62,
+        44,
+        32
+      ],
+      "approx_year": 1975
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.4437,
+      "x_px": 647,
+      "y_px": 461,
+      "height_px": 3,
+      "hex": "#744631",
+      "rgb": [
+        116,
+        70,
+        49
+      ],
+      "approx_year": 1975
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.4519,
+      "x_px": 647,
+      "y_px": 470,
+      "height_px": 12,
+      "hex": "#2F2721",
+      "rgb": [
+        47,
+        39,
+        33
+      ],
+      "approx_year": 1975
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.463,
+      "x_px": 647,
+      "y_px": 481,
+      "height_px": 3,
+      "hex": "#524539",
+      "rgb": [
+        82,
+        69,
+        57
+      ],
+      "approx_year": 1976
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.4721,
+      "x_px": 647,
+      "y_px": 491,
+      "height_px": 14,
+      "hex": "#222A26",
+      "rgb": [
+        34,
+        42,
+        38
+      ],
+      "approx_year": 1976
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.4913,
+      "x_px": 647,
+      "y_px": 511,
+      "height_px": 6,
+      "hex": "#59595B",
+      "rgb": [
+        89,
+        89,
+        91
+      ],
+      "approx_year": 1977
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.4966,
+      "x_px": 647,
+      "y_px": 516,
+      "height_px": 3,
+      "hex": "#322F2B",
+      "rgb": [
+        50,
+        47,
+        43
+      ],
+      "approx_year": 1977
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.524,
+      "x_px": 647,
+      "y_px": 545,
+      "height_px": 6,
+      "hex": "#D2C3B9",
+      "rgb": [
+        210,
+        195,
+        185
+      ],
+      "approx_year": 1978
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.5452,
+      "x_px": 647,
+      "y_px": 567,
+      "height_px": 4,
+      "hex": "#E4D7C3",
+      "rgb": [
+        228,
+        215,
+        195
+      ],
+      "approx_year": 1978
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.5563,
+      "x_px": 647,
+      "y_px": 578,
+      "height_px": 3,
+      "hex": "#281F19",
+      "rgb": [
+        40,
+        31,
+        25
+      ],
+      "approx_year": 1979
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.5635,
+      "x_px": 647,
+      "y_px": 586,
+      "height_px": 6,
+      "hex": "#7C4D37",
+      "rgb": [
+        124,
+        77,
+        55
+      ],
+      "approx_year": 1979
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.5697,
+      "x_px": 647,
+      "y_px": 592,
+      "height_px": 5,
+      "hex": "#3B322A",
+      "rgb": [
+        59,
+        50,
+        42
+      ],
+      "approx_year": 1979
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.5827,
+      "x_px": 647,
+      "y_px": 606,
+      "height_px": 4,
+      "hex": "#6B513F",
+      "rgb": [
+        107,
+        81,
+        63
+      ],
+      "approx_year": 1980
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.5909,
+      "x_px": 647,
+      "y_px": 614,
+      "height_px": 11,
+      "hex": "#3D3326",
+      "rgb": [
+        61,
+        51,
+        38
+      ],
+      "approx_year": 1980
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.6111,
+      "x_px": 647,
+      "y_px": 635,
+      "height_px": 11,
+      "hex": "#21211A",
+      "rgb": [
+        33,
+        33,
+        26
+      ],
+      "approx_year": 1981
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.6303,
+      "x_px": 647,
+      "y_px": 655,
+      "height_px": 15,
+      "hex": "#211F16",
+      "rgb": [
+        33,
+        31,
+        22
+      ],
+      "approx_year": 1982
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.6418,
+      "x_px": 647,
+      "y_px": 667,
+      "height_px": 3,
+      "hex": "#BD9B8D",
+      "rgb": [
+        189,
+        155,
+        141
+      ],
+      "approx_year": 1982
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.651,
+      "x_px": 647,
+      "y_px": 677,
+      "height_px": 4,
+      "hex": "#4A3530",
+      "rgb": [
+        74,
+        53,
+        48
+      ],
+      "approx_year": 1982
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.6683,
+      "x_px": 647,
+      "y_px": 695,
+      "height_px": 4,
+      "hex": "#263863",
+      "rgb": [
+        38,
+        56,
+        99
+      ],
+      "approx_year": 1983
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.675,
+      "x_px": 647,
+      "y_px": 702,
+      "height_px": 4,
+      "hex": "#171918",
+      "rgb": [
+        23,
+        25,
+        24
+      ],
+      "approx_year": 1983
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.6808,
+      "x_px": 647,
+      "y_px": 708,
+      "height_px": 4,
+      "hex": "#EDC6AB",
+      "rgb": [
+        237,
+        198,
+        171
+      ],
+      "approx_year": 1983
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.6875,
+      "x_px": 647,
+      "y_px": 715,
+      "height_px": 8,
+      "hex": "#C89971",
+      "rgb": [
+        200,
+        153,
+        113
+      ],
+      "approx_year": 1984
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.7048,
+      "x_px": 647,
+      "y_px": 733,
+      "height_px": 4,
+      "hex": "#493121",
+      "rgb": [
+        73,
+        49,
+        33
+      ],
+      "approx_year": 1984
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.7135,
+      "x_px": 647,
+      "y_px": 742,
+      "height_px": 6,
+      "hex": "#1A1913",
+      "rgb": [
+        26,
+        25,
+        19
+      ],
+      "approx_year": 1985
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.7221,
+      "x_px": 647,
+      "y_px": 751,
+      "height_px": 4,
+      "hex": "#8C5A51",
+      "rgb": [
+        140,
+        90,
+        81
+      ],
+      "approx_year": 1985
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.7269,
+      "x_px": 647,
+      "y_px": 756,
+      "height_px": 4,
+      "hex": "#5A3F3E",
+      "rgb": [
+        90,
+        63,
+        62
+      ],
+      "approx_year": 1985
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.7514,
+      "x_px": 647,
+      "y_px": 781,
+      "height_px": 9,
+      "hex": "#3A383A",
+      "rgb": [
+        58,
+        56,
+        58
+      ],
+      "approx_year": 1986
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.7635,
+      "x_px": 647,
+      "y_px": 794,
+      "height_px": 4,
+      "hex": "#9F705C",
+      "rgb": [
+        159,
+        112,
+        92
+      ],
+      "approx_year": 1986
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.7678,
+      "x_px": 647,
+      "y_px": 798,
+      "height_px": 3,
+      "hex": "#59453A",
+      "rgb": [
+        89,
+        69,
+        58
+      ],
+      "approx_year": 1986
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.7755,
+      "x_px": 647,
+      "y_px": 806,
+      "height_px": 3,
+      "hex": "#302D30",
+      "rgb": [
+        48,
+        45,
+        48
+      ],
+      "approx_year": 1987
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.7913,
+      "x_px": 647,
+      "y_px": 823,
+      "height_px": 4,
+      "hex": "#546C5E",
+      "rgb": [
+        84,
+        108,
+        94
+      ],
+      "approx_year": 1987
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.7957,
+      "x_px": 647,
+      "y_px": 827,
+      "height_px": 3,
+      "hex": "#2A201C",
+      "rgb": [
+        42,
+        32,
+        28
+      ],
+      "approx_year": 1987
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.8029,
+      "x_px": 647,
+      "y_px": 835,
+      "height_px": 4,
+      "hex": "#5E402C",
+      "rgb": [
+        94,
+        64,
+        44
+      ],
+      "approx_year": 1988
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.8087,
+      "x_px": 647,
+      "y_px": 841,
+      "height_px": 6,
+      "hex": "#302F26",
+      "rgb": [
+        48,
+        47,
+        38
+      ],
+      "approx_year": 1988
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.8149,
+      "x_px": 647,
+      "y_px": 847,
+      "height_px": 5,
+      "hex": "#82A3AF",
+      "rgb": [
+        130,
+        163,
+        175
+      ],
+      "approx_year": 1988
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.8486,
+      "x_px": 647,
+      "y_px": 882,
+      "height_px": 7,
+      "hex": "#6A96AB",
+      "rgb": [
+        106,
+        150,
+        171
+      ],
+      "approx_year": 1989
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.963,
+      "x_px": 647,
+      "y_px": 1001,
+      "height_px": 11,
+      "hex": "#201511",
+      "rgb": [
+        32,
+        21,
+        17
+      ],
+      "approx_year": 1993
+    },
+    {
+      "designer": "ishioka",
+      "x": 0.88,
+      "y": 0.976,
+      "x_px": 647,
+      "y_px": 1015,
+      "height_px": 6,
+      "hex": "#D2CCCE",
+      "rgb": [
+        210,
+        204,
+        206
+      ],
+      "approx_year": 1993
+    }
+  ]
+};
+
+const DESIGNERS = {
+  nagai:   { jp:'永井一正', en:'Nagai', accent:'#EE8E42', idx:0 },
+  tanaka:  { jp:'田中一光', en:'Tanaka', accent:'#BAB4A2', idx:1 },
+  fukuda:  { jp:'福田繁雄', en:'Fukuda', accent:'#B51A21', idx:2 },
+  ishioka: { jp:'石岡瑛子', en:'Ishioka', accent:'#6A96AB', idx:3 },
+};
+
+// ─── Color Symbolism Database ───
+const SYMBOLISM = [
+  { color:'Indigo / Blue', hueRange:[200,260], satMin:0.15, lumRange:[0,0.55],
+    symbols:['Spirituality, wealth, abundance','Protection, the sky, water, spirit world'],
+    psych:'Promotes relaxation, lowers heart rate, mental clarity and trust',
+    cultures:['Yoruba','Tuareg','Berber'] },
+  { color:'White / Light Gray', hueRange:[0,360], satMax:0.1, lumRange:[0.75,1],
+    symbols:['Purity, transcendence, peace','Hope for new beginning'],
+    psych:'Induces calmness, cleanliness, safety — resemblance to sunlight promotes comfort',
+    cultures:['Yoruba','Xhosa'] },
+  { color:'Black / Near-Black', hueRange:[0,360], satMax:0.2, lumRange:[0,0.1],
+    symbols:['Maturity, wisdom, transition','Resilience, authority, power'],
+    psych:'Somber depth, the unknown — portrays authority and formality',
+    cultures:['Ashanti','Yoruba'] },
+  { color:'Red', hueRange:[345,360], satMin:0.3, lumRange:[0.15,0.6],
+    symbols:['Vitality, courage, life force','Passion, love, protection'],
+    psych:'Excitement, urgency — increases heart rate and alertness',
+    cultures:['Yoruba','Zulu'] },
+  { color:'Red', hueRange:[0,15], satMin:0.3, lumRange:[0.15,0.6],
+    symbols:['Vitality, courage, life force','Passion, love, protection'],
+    psych:'Excitement, urgency — increases heart rate and alertness',
+    cultures:['Yoruba','Zulu'] },
+  { color:'Gold / Yellow', hueRange:[40,65], satMin:0.3, lumRange:[0.4,0.95],
+    symbols:['Wealth, royalty, spiritual purity','The sun\'s brightness and optimism'],
+    psych:'Cheerful, mentally stimulating — encourages clarity and communication',
+    cultures:['Ashanti','Berber','Zulu'] },
+  { color:'Orange / Amber', hueRange:[15,40], satMin:0.3, lumRange:[0.25,0.7],
+    symbols:['Warmth, energy, harvest','Vitality between fire and sun'],
+    psych:'Stimulating and energizing — bridges passion and optimism',
+    cultures:['Berber','Zulu'] },
+  { color:'Green', hueRange:[80,170], satMin:0.15, lumRange:[0.1,0.6],
+    symbols:['Growth, vitality, fertile land','Renewal, hope, the oasis'],
+    psych:'Calming, stabilizing — associated with healing and emotional well-being',
+    cultures:['Ashanti','Pan-African','Berber'] },
+  { color:'Purple / Violet', hueRange:[260,310], satMin:0.15, lumRange:[0.1,0.55],
+    symbols:['Luxury, royalty, exclusivity','Reserved historically for rulers'],
+    psych:'Stimulates creativity and innovative thinking — reduces mental stress',
+    cultures:['Roman','Modern Design'] },
+  { color:'Earth Tones', hueRange:[15,45], satMin:0.1, lumRange:[0.1,0.45],
+    symbols:['Agricultural wealth, natural beauty','Connection to the land'],
+    psych:'Grounding and comforting — deep material warmth',
+    cultures:['Uganda','Pan-African'] },
+  { color:'Mid Gray', hueRange:[0,360], satMax:0.08, lumRange:[0.3,0.75],
+    symbols:['Balance, neutrality, transition','Between presence and absence'],
+    psych:'Quiet contemplation — neither stimulating nor suppressing',
+    cultures:[] },
+];
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  if (max === min) { h = s = 0; }
+  else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+    h *= 360;
+  }
+  return [h, s, l];
+}
+
+function classifyColor(rgb) {
+  const [h, s, l] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+  const colorName = s < 0.08 ? (l < 0.1 ? 'Near-Black' : l > 0.75 ? 'White' : 'Gray') :
+    h < 15 ? 'Red' : h < 40 ? (l < 0.45 ? 'Brown' : 'Orange') :
+    h < 65 ? 'Yellow' : h < 80 ? 'Yellow-Green' :
+    h < 170 ? 'Green' : h < 200 ? 'Cyan' :
+    h < 260 ? 'Blue' : h < 310 ? 'Purple' : 'Red';
+
+  for (const sym of SYMBOLISM) {
+    const hueMatch = h >= sym.hueRange[0] && h <= sym.hueRange[1];
+    const satMatch = (sym.satMin === undefined || s >= sym.satMin) && (sym.satMax === undefined || s <= sym.satMax);
+    const lumMatch = l >= sym.lumRange[0] && l <= sym.lumRange[1];
+    if (hueMatch && satMatch && lumMatch) return { name: colorName, ...sym };
+  }
+  return { name: colorName, symbols: [], psych: '', cultures: [] };
+}
+
+// ─── Canvas Setup ───
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, dpr;
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ─── Particle System ───
+class Particle {
+  constructor(entry, index, totalInDesigner) {
+    this.entry = entry;
+    this.designer = entry.designer;
+    this.hex = entry.hex;
+    this.rgb = entry.rgb;
+    this.year = entry.approx_year;
+    this.weight = Math.max(entry.height_px, 4);
+
+    // Home position (orbital layout)
+    const d = DESIGNERS[this.designer];
+    const designerAngle = (d.idx / 4) * Math.PI * 2 - Math.PI / 2;
+    const orbitR = Math.min(W, H) * 0.28;
+    const cx = W / 2 + Math.cos(designerAngle) * orbitR;
+    const cy = H / 2 + Math.sin(designerAngle) * orbitR;
+
+    // Spread within designer cluster by year
+    const yearNorm = (this.year - 1960) / 33;
+    const spiralAngle = yearNorm * Math.PI * 6 + index * 0.4;
+    const spiralR = yearNorm * orbitR * 0.55 + 10;
+
+    this.homeX = cx + Math.cos(spiralAngle) * spiralR;
+    this.homeY = cy + Math.sin(spiralAngle) * spiralR;
+
+    // Timeline position
+    const timeX = 80 + yearNorm * (W - 160);
+    const bandHeight = H * 0.12;
+    const bandY = H * 0.3 + d.idx * bandHeight * 1.4;
+    this.timeX = timeX;
+    this.timeY = bandY + (index / totalInDesigner) * bandHeight - bandHeight / 2;
+
+    // Current position
+    this.x = W / 2 + (Math.random() - 0.5) * W * 1.5;
+    this.y = H / 2 + (Math.random() - 0.5) * H * 1.5;
+    this.targetX = this.homeX;
+    this.targetY = this.homeY;
+    this.vx = 0;
+    this.vy = 0;
+
+    this.baseSize = Math.sqrt(this.weight) * 2.5;
+    this.size = this.baseSize;
+    this.alpha = 0;
+    this.targetAlpha = 0.85;
+    this.glowAlpha = 0;
+    this.hover = false;
+
+    // Physics
+    this.phase = Math.random() * Math.PI * 2;
+    this.breathSpeed = 0.3 + Math.random() * 0.4;
+    this.driftAmp = 1.5 + Math.random() * 2;
+  }
+
+  setMode(mode) {
+    if (mode === 'orbital') {
+      this.targetX = this.homeX;
+      this.targetY = this.homeY;
+    } else if (mode === 'timeline') {
+      this.targetX = this.timeX;
+      this.targetY = this.timeY;
+    }
+  }
+
+  update(t, mx, my, mouseActive) {
+    // Breathing
+    this.phase += this.breathSpeed * 0.016;
+    const breath = Math.sin(this.phase) * this.driftAmp;
+
+    // Spring to target
+    const dx = (this.targetX + breath) - this.x;
+    const dy = (this.targetY + breath * 0.6) - this.y;
+    this.vx += dx * 0.04;
+    this.vy += dy * 0.04;
+    this.vx *= 0.88;
+    this.vy *= 0.88;
+
+    // Mouse interaction
+    if (mouseActive) {
+      const mdx = this.x - mx;
+      const mdy = this.y - my;
+      const md = Math.sqrt(mdx * mdx + mdy * mdy);
+      const influence = 120;
+      if (md < influence) {
+        const force = (1 - md / influence) * 3;
+        this.vx += mdx / md * force;
+        this.vy += mdy / md * force;
+        this.glowAlpha = Math.max(this.glowAlpha, (1 - md / influence) * 0.5);
+      }
+    }
+
+    this.x += this.vx;
+    this.y += this.vy;
+
+    // Alpha fade in
+    this.alpha += (this.targetAlpha - this.alpha) * 0.05;
+    this.glowAlpha *= 0.94;
+
+    // Hover size
+    this.size += ((this.hover ? this.baseSize * 2.5 : this.baseSize) - this.size) * 0.15;
+  }
+
+  draw(ctx) {
+    // Glow
+    if (this.glowAlpha > 0.01) {
+      const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size * 5);
+      grad.addColorStop(0, `rgba(${this.rgb[0]},${this.rgb[1]},${this.rgb[2]},${this.glowAlpha * 0.4})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(this.x - this.size * 5, this.y - this.size * 5, this.size * 10, this.size * 10);
+    }
+
+    // Core
+    ctx.globalAlpha = this.alpha;
+    ctx.fillStyle = this.hex;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Inner highlight
+    if (this.size > 4) {
+      const [r, g, b] = this.rgb;
+      const lum = (r + g + b) / 3;
+      if (lum < 40) {
+        // Dark colors get a subtle ring
+        ctx.strokeStyle = `rgba(255,255,255,${0.08 * this.alpha})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ─── Build Particles ───
+const particles = [];
+const byDesigner = {};
+PALETTE_DATA.palette.forEach(e => {
+  if (!byDesigner[e.designer]) byDesigner[e.designer] = [];
+  byDesigner[e.designer].push(e);
+});
+
+Object.keys(byDesigner).forEach(d => {
+  byDesigner[d].forEach((e, i) => {
+    particles.push(new Particle(e, i, byDesigner[d].length));
+  });
+});
+
+// ─── UI Setup ───
+const labelsEl = document.getElementById('designer-labels');
+let activeDesigner = null;
+
+Object.keys(DESIGNERS).forEach(key => {
+  const d = DESIGNERS[key];
+  const el = document.createElement('div');
+  el.className = 'dl';
+  el.innerHTML = `<span class="dot" style="background:${d.accent}"></span>${d.jp} ${d.en}`;
+  el.addEventListener('click', () => {
+    if (activeDesigner === key) {
+      activeDesigner = null;
+      el.classList.remove('active');
+      particles.forEach(p => { p.targetAlpha = 0.85; });
+    } else {
+      activeDesigner = key;
+      labelsEl.querySelectorAll('.dl').forEach(e => e.classList.remove('active'));
+      el.classList.add('active');
+      particles.forEach(p => {
+        p.targetAlpha = p.designer === key ? 0.95 : 0.08;
+      });
+    }
+  });
+  labelsEl.appendChild(el);
+});
+
+// ─── Knowledge Graph ───
+const GRAPH_NODES = [
+  // Production & Tech
+  { id:'perkin', label:'William Henry Perkin', type:'Person', sub:'Chemist — 1856 malaria cure research led to accidental dye synthesis', group:'tech', color:'#9B59B6' },
+  { id:'mauveine', label:'Mauveine', type:'Synthetic Dye', sub:'First synthetic organic dye — launched an industry', group:'tech', color:'#8E44AD' },
+  { id:'coal_tar', label:'Coal Tar', type:'Material', sub:'Industrial waste became the source of synthetic color', group:'tech', color:'#5D6D7E' },
+  { id:'alizarin', label:'Alizarin Crimson', type:'Synthetic Dye', sub:'Replaced natural madder root — first natural pigment replicated', group:'tech', color:'#DC143C' },
+  { id:'synth_ultra', label:'Synthetic Ultramarine', type:'Pigment', sub:'Collapsed the price of lapis lazuli blue', group:'tech', color:'#2E86C1' },
+  { id:'nat_ultra', label:'Natural Ultramarine', type:'Pigment', sub:'Lapis lazuli — once more precious than gold', group:'tech', color:'#1B4F72' },
+  { id:'metal_tube', label:'Collapsible Paint Tube', type:'Technology', sub:'Portability of premixed paints — changed where art happened', group:'tech', color:'#ABB2B9' },
+  { id:'aniline', label:'Aniline Dyes', type:'Dye Family', sub:'Coal tar derivatives — vivid, cheap, unstable', group:'tech', color:'#A569BD' },
+  { id:'synth_rev', label:'Synthetic Pigment Revolution', type:'Event', sub:'Democratized color access — broke the monopoly of nature', group:'tech', color:'#F39C12' },
+  // Color Theory
+  { id:'rgb', label:'Additive Color (RGB)', type:'Theory', sub:'Light mixing — Newton to screens', group:'theory', color:'#E74C3C' },
+  { id:'cmy', label:'Subtractive Color (CMY)', type:'Theory', sub:'Pigment mixing — print, paint, dye', group:'theory', color:'#2ECC71' },
+  // Art Movements
+  { id:'impressionism', label:'French Impressionism', type:'Movement', sub:'Light, color, sensation — materially enabled by synthetic pigments', group:'art', color:'#5DADE2' },
+  { id:'solar_palette', label:'Solar Palette', type:'Technique', sub:'Pure spectral colors replacing earth tones', group:'art', color:'#F4D03F' },
+  { id:'en_plein_air', label:'En Plein Air', type:'Practice', sub:'Painting outdoors — freed by portable tubes', group:'art', color:'#58D68D' },
+  { id:'neoclassicism', label:'Neoclassical Design', type:'Movement', sub:'Order, restraint, earth tones — the old guard', group:'art', color:'#D5DBDB' },
+  { id:'optical_mixing', label:'Optical Mixing', type:'Technique', sub:'Juxtaposed dots of pure color blend in the eye', group:'art', color:'#EB984E' },
+  // Linguistics
+  { id:'berlin_kay', label:'Berlin & Kay', type:'Scholars', sub:'Codified Basic Color Terms, 1969', group:'ling', color:'#E8DAEF' },
+  { id:'bct', label:'Basic Color Terms', type:'Linguistic Universal', sub:'All languages follow the same color naming sequence', group:'ling', color:'#D2B4DE' },
+  { id:'evol_seq', label:'Evolutionary Hierarchy', type:'Pattern', sub:'Black/White → Red → Yellow/Green → Blue → Brown → Purple/Pink/Orange/Gray', group:'ling', color:'#C39BD3' },
+  { id:'ling_rel', label:'Linguistic Relativity', type:'Theory', sub:'Language shapes color perception — challenged by universals', group:'ling', color:'#BB8FCE' },
+  { id:'sapir_whorf', label:'Sapir-Whorf', type:'Scholars', sub:'Language determines the boundaries of thought', group:'ling', color:'#A569BD' },
+  { id:'emergence', label:'Emergence Hypothesis', type:'Theory', sub:'Color terms evolve with cultural need, not abstraction', group:'ling', color:'#9B59B6' },
+  { id:'color_naming', label:'Color Naming', type:'Concept', sub:'How cultures carve the spectrum into words', group:'ling', color:'#AEB6BF' },
+  // Cultural
+  { id:'yoruba', label:'Yoruba Culture', type:'Culture', sub:'West Africa — indigo as spiritual technology', group:'culture', color:'#1A5276' },
+  { id:'adire', label:'Adire Cloth', type:'Textile', sub:'Indigo resist-dyed — rites of passage', group:'culture', color:'#1B4F72' },
+  { id:'indigo', label:'Indigo', type:'Natural/Sacred Dye', sub:'Deep blue from Indigofera — bridges plant, spirit, cloth', group:'culture', color:'#2471A3' },
+  { id:'spirituality', label:'Spirituality & Wealth', type:'Symbolism', sub:'Yoruba — indigo as cosmic connection', group:'culture', color:'#5499C7' },
+  { id:'native_am', label:'Native American', type:'Culture', sub:'Red earth, red life — color as kinship with land', group:'culture', color:'#C0392B' },
+  { id:'red_sym', label:'Red Symbolism', type:'Symbolism', sub:'Earth, life power, blood, vitality across cultures', group:'culture', color:'#E74C3C' },
+  { id:'earth_life', label:'Earth & Life Power', type:'Symbolism', sub:'Red as blood of the earth — protection, courage', group:'culture', color:'#CB4335' },
+  // Bridge
+  { id:'jp_design', label:'Post-war Japanese Design', type:'Movement', sub:'Nagai, Tanaka, Fukuda, Ishioka — 1960s–1990s', group:'art', color:'#E8E8E8' },
+];
+
+const GRAPH_EDGES = [
+  // Synthetic Revolution chain
+  { s:'perkin', t:'mauveine', label:'accidentally synthesized' },
+  { s:'coal_tar', t:'mauveine', label:'source material' },
+  { s:'coal_tar', t:'alizarin', label:'source material' },
+  { s:'mauveine', t:'aniline', label:'first of' },
+  { s:'aniline', t:'synth_rev', label:'triggered' },
+  { s:'mauveine', t:'synth_rev', label:'part of' },
+  { s:'synth_ultra', t:'nat_ultra', label:'collapsed price of' },
+  { s:'synth_ultra', t:'synth_rev', label:'part of' },
+  // Art chain
+  { s:'metal_tube', t:'en_plein_air', label:'enabled' },
+  { s:'en_plein_air', t:'impressionism', label:'essential to' },
+  { s:'solar_palette', t:'impressionism', label:'defines' },
+  { s:'optical_mixing', t:'solar_palette', label:'implementation of' },
+  { s:'neoclassicism', t:'impressionism', label:'contrasts with' },
+  { s:'synth_rev', t:'solar_palette', label:'provided pigments for' },
+  { s:'synth_rev', t:'impressionism', label:'materially enabled' },
+  // Color theory
+  { s:'rgb', t:'optical_mixing', label:'theoretical basis' },
+  { s:'cmy', t:'solar_palette', label:'pigment foundation' },
+  { s:'rgb', t:'cmy', label:'complement of' },
+  // Linguistics chain
+  { s:'berlin_kay', t:'bct', label:'codified' },
+  { s:'bct', t:'evol_seq', label:'follows' },
+  { s:'ling_rel', t:'berlin_kay', label:'challenged by' },
+  { s:'sapir_whorf', t:'ling_rel', label:'associated with' },
+  { s:'emergence', t:'bct', label:'offers alternative to' },
+  { s:'emergence', t:'color_naming', label:'suggests non-abstract' },
+  { s:'bct', t:'color_naming', label:'systematized' },
+  // Cultural chain
+  { s:'yoruba', t:'adire', label:'produces' },
+  { s:'adire', t:'indigo', label:'utilizes' },
+  { s:'indigo', t:'spirituality', label:'symbolizes' },
+  { s:'native_am', t:'earth_life', label:'interprets red as' },
+  { s:'native_am', t:'red_sym', label:'cultural meaning' },
+  { s:'red_sym', t:'earth_life', label:'manifests as' },
+  // Cross-domain bridges
+  { s:'synth_rev', t:'jp_design', label:'influenced' },
+  { s:'impressionism', t:'jp_design', label:'cross-pollinated' },
+  { s:'indigo', t:'jp_design', label:'traditional connection' },
+  { s:'evol_seq', t:'color_naming', label:'predicts' },
+];
+
+const GROUP_COLORS = {
+  tech:'rgba(155,89,182,0.15)',
+  art:'rgba(93,173,226,0.12)',
+  ling:'rgba(210,180,222,0.12)',
+  culture:'rgba(231,76,60,0.12)',
+  theory:'rgba(46,204,113,0.12)',
+};
+
+// Force-directed graph state
+const gNodes = GRAPH_NODES.map((n, i) => {
+  const groupAngle = { tech: -Math.PI*0.4, art: Math.PI*0.1, ling: Math.PI*0.6, culture: Math.PI*1.1, theory: -Math.PI*0.1 };
+  const a = groupAngle[n.group] || 0;
+  const spread = 120;
+  return {
+    ...n,
+    x: W/2 + Math.cos(a) * 200 + (Math.random()-0.5) * spread,
+    y: H/2 + Math.sin(a) * 150 + (Math.random()-0.5) * spread,
+    vx: 0, vy: 0,
+    radius: n.type === 'Event' || n.type === 'Movement' ? 18 : 12,
+    hover: false,
+  };
+});
+
+const gEdges = GRAPH_EDGES.map(e => ({
+  source: gNodes.find(n => n.id === e.s),
+  target: gNodes.find(n => n.id === e.t),
+  label: e.label,
+}));
+
+function resetGraphPositions() {
+  const groupAngle = { tech: -Math.PI*0.4, art: Math.PI*0.1, ling: Math.PI*0.6, culture: Math.PI*1.1, theory: -Math.PI*0.1 };
+  gNodes.forEach(n => {
+    const a = groupAngle[n.group] || 0;
+    n.x = W/2 + Math.cos(a) * 140 + (Math.random()-0.5) * 80;
+    n.y = H/2 + Math.sin(a) * 100 + (Math.random()-0.5) * 80;
+    n.vx = 0;
+    n.vy = 0;
+  });
+}
+
+function simGraph() {
+  // Force simulation step
+  const k = 0.005; // attraction
+  const repulsion = 3000;
+  const damping = 0.82;
+  const centerPull = 0.008;
+
+  // Repulsion between all nodes
+  for (let i = 0; i < gNodes.length; i++) {
+    for (let j = i+1; j < gNodes.length; j++) {
+      const a = gNodes[i], b = gNodes[j];
+      let dx = a.x - b.x, dy = a.y - b.y;
+      let d2 = dx*dx + dy*dy;
+      if (d2 < 1) d2 = 1;
+      const f = repulsion / d2;
+      const fx = dx / Math.sqrt(d2) * f;
+      const fy = dy / Math.sqrt(d2) * f;
+      a.vx += fx; a.vy += fy;
+      b.vx -= fx; b.vy -= fy;
+    }
+  }
+
+  // Edge attraction
+  gEdges.forEach(e => {
+    const dx = e.target.x - e.source.x;
+    const dy = e.target.y - e.source.y;
+    const d = Math.sqrt(dx*dx + dy*dy);
+    const ideal = 90;
+    const f = (d - ideal) * k;
+    const fx = dx/d * f, fy = dy/d * f;
+    e.source.vx += fx; e.source.vy += fy;
+    e.target.vx -= fx; e.target.vy -= fy;
+  });
+
+  // Center gravity
+  gNodes.forEach(n => {
+    n.vx += (W/2 - n.x) * centerPull;
+    n.vy += (H/2 - n.y) * centerPull;
+    n.vx *= damping;
+    n.vy *= damping;
+    n.x += n.vx;
+    n.y += n.vy;
+    // Bounds
+    n.x = Math.max(80, Math.min(W-80, n.x));
+    n.y = Math.max(80, Math.min(H-80, n.y));
+  });
+}
+
+function drawGraph() {
+  // Edges
+  gEdges.forEach(e => {
+    const hoverEdge = e.source.hover || e.target.hover;
+    ctx.strokeStyle = hoverEdge ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = hoverEdge ? 1.2 : 0.6;
+    ctx.beginPath();
+    ctx.moveTo(e.source.x, e.source.y);
+    ctx.lineTo(e.target.x, e.target.y);
+    ctx.stroke();
+
+    // Edge label
+    if (hoverEdge) {
+      const mx = (e.source.x + e.target.x) / 2;
+      const my = (e.source.y + e.target.y) / 2;
+      ctx.font = '8px Inter, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.textAlign = 'center';
+      ctx.fillText(e.label, mx, my - 4);
+    }
+  });
+
+  // Group halos
+  const groups = {};
+  gNodes.forEach(n => {
+    if (!groups[n.group]) groups[n.group] = [];
+    groups[n.group].push(n);
+  });
+  Object.keys(groups).forEach(g => {
+    const nodes = groups[g];
+    let cx = 0, cy = 0;
+    nodes.forEach(n => { cx += n.x; cy += n.y; });
+    cx /= nodes.length; cy /= nodes.length;
+    let maxR = 0;
+    nodes.forEach(n => { maxR = Math.max(maxR, Math.hypot(n.x-cx, n.y-cy)); });
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR + 60);
+    grad.addColorStop(0, GROUP_COLORS[g] || 'rgba(255,255,255,0.05)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, maxR + 60, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Nodes
+  gNodes.forEach(n => {
+    const r = n.hover ? n.radius * 1.5 : n.radius;
+
+    // Glow on hover
+    if (n.hover) {
+      const glow = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 3);
+      glow.addColorStop(0, n.color + '40');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Core circle
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = n.hover ? n.color : n.color + '99';
+    ctx.fill();
+    ctx.strokeStyle = n.hover ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = n.hover ? 1.5 : 0.5;
+    ctx.stroke();
+
+    // Label
+    ctx.font = n.hover ? '11px Inter, sans-serif' : '9px Inter, sans-serif';
+    ctx.fillStyle = n.hover ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.45)';
+    ctx.textAlign = 'center';
+    ctx.fillText(n.label, n.x, n.y + r + 14);
+  });
+
+  // Group labels
+  ctx.font = '10px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  const groupLabels = { tech:'PRODUCTION & TECH', art:'ARTISTIC APPLICATION', ling:'LINGUISTIC THEORY', culture:'SOCIOCULTURAL IDENTITY', theory:'COLOR THEORY' };
+  Object.keys(groups).forEach(g => {
+    const nodes = groups[g];
+    let cx = 0, cy = 0;
+    nodes.forEach(n => { cx += n.x; cy += n.y; });
+    cx /= nodes.length; cy /= nodes.length;
+    let minY = Infinity;
+    nodes.forEach(n => { minY = Math.min(minY, n.y); });
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.letterSpacing = '2px';
+    ctx.fillText(groupLabels[g] || g, cx, minY - 30);
+  });
+}
+
+// ─── Mode ───
+let mode = 'orbital';
+let frozen = false;
+const graphTooltip = document.getElementById('graph-tooltip');
+
+// Mode bar buttons
+let lastModeBarClick = 0;
+document.querySelectorAll('#mode-bar button').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    lastModeBarClick = Date.now();
+    document.querySelectorAll('#mode-bar button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const newMode = btn.dataset.mode;
+    if (newMode !== mode) {
+      mode = newMode;
+      recalcPositions();
+      particles.forEach(p => p.setMode(mode));
+      if (mode === 'network') {
+        resetGraphPositions();
+        particles.forEach(p => { p.targetAlpha = 0.04; });
+      } else if (activeDesigner) {
+        particles.forEach(p => {
+          p.targetAlpha = p.designer === activeDesigner ? 0.95 : 0.08;
+        });
+      } else {
+        particles.forEach(p => { p.targetAlpha = 0.85; });
+      }
+    }
+  });
+});
+
+canvas.addEventListener('click', (e) => {
+  // Don't toggle if mode bar was just clicked or in network mode
+  if (Date.now() - lastModeBarClick < 300) return;
+  if (mode === 'network') return;
+  if (mode === 'orbital') {
+    mode = 'timeline';
+    document.querySelectorAll('#mode-bar button').forEach(b => b.classList.remove('active'));
+    document.querySelector('#mode-bar button[data-mode="timeline"]').classList.add('active');
+    recalcPositions();
+    particles.forEach(p => p.setMode(mode));
+  } else if (mode === 'timeline') {
+    mode = 'orbital';
+    document.querySelectorAll('#mode-bar button').forEach(b => b.classList.remove('active'));
+    document.querySelector('#mode-bar button[data-mode="orbital"]').classList.add('active');
+    recalcPositions();
+    particles.forEach(p => p.setMode(mode));
+  }
+});
+
+function recalcPositions() {
+  // Recalc home positions for current window size
+  Object.keys(byDesigner).forEach(dKey => {
+    const d = DESIGNERS[dKey];
+    const designerAngle = (d.idx / 4) * Math.PI * 2 - Math.PI / 2;
+    const orbitR = Math.min(W, H) * 0.28;
+    const cx = W / 2 + Math.cos(designerAngle) * orbitR;
+    const cy = H / 2 + Math.sin(designerAngle) * orbitR;
+    const entries = byDesigner[dKey];
+    const bandHeight = H * 0.12;
+    const bandY = H * 0.3 + d.idx * bandHeight * 1.4;
+
+    entries.forEach((e, i) => {
+      const p = particles.find(pp => pp.entry === e);
+      if (!p) return;
+      const yearNorm = (p.year - 1960) / 33;
+      const spiralAngle = yearNorm * Math.PI * 6 + i * 0.4;
+      const spiralR = yearNorm * orbitR * 0.55 + 10;
+      p.homeX = cx + Math.cos(spiralAngle) * spiralR;
+      p.homeY = cy + Math.sin(spiralAngle) * spiralR;
+      p.timeX = 80 + yearNorm * (W - 160);
+      p.timeY = bandY + (i / entries.length) * bandHeight - bandHeight / 2;
+    });
+  });
+}
+
+window.addEventListener('resize', () => {
+  recalcPositions();
+  particles.forEach(p => p.setMode(mode));
+});
+
+// ─── Mouse ───
+let mx = -1000, my = -1000, mouseActive = false;
+const tooltip = document.getElementById('tooltip');
+const yearDisplay = document.getElementById('year-display');
+
+canvas.addEventListener('mousemove', e => {
+  mx = e.clientX;
+  my = e.clientY;
+  mouseActive = true;
+
+  // Graph node hover in network mode
+  if (mode === 'network') {
+    gNodes.forEach(n => { n.hover = false; });
+    let closestNode = null, cnDist = Infinity;
+    gNodes.forEach(n => {
+      const d = Math.hypot(n.x - mx, n.y - my);
+      if (d < cnDist) { cnDist = d; closestNode = n; }
+    });
+    if (closestNode && cnDist < closestNode.radius * 2.5) {
+      closestNode.hover = true;
+      graphTooltip.style.display = 'block';
+      graphTooltip.querySelector('.gt-title').textContent = closestNode.label;
+      graphTooltip.querySelector('.gt-type').textContent = closestNode.type;
+      graphTooltip.querySelector('.gt-context').textContent = closestNode.sub;
+      let gx = mx + 18, gy = my + 18;
+      if (gx + 260 > W) gx = mx - 270;
+      if (gy + 80 > H) gy = my - 90;
+      graphTooltip.style.left = gx + 'px';
+      graphTooltip.style.top = gy + 'px';
+    } else {
+      graphTooltip.style.display = 'none';
+    }
+    tooltip.style.display = 'none';
+    return;
+  }
+  graphTooltip.style.display = 'none';
+
+  // Find closest particle
+  let closest = null, closestDist = Infinity;
+  particles.forEach(p => {
+    const d = Math.hypot(p.x - mx, p.y - my);
+    if (d < closestDist) { closestDist = d; closest = p; }
+  });
+
+  particles.forEach(p => { p.hover = false; });
+
+  if (closest && closestDist < 40) {
+    closest.hover = true;
+    tooltip.style.display = 'block';
+    tooltip.querySelector('.t-swatch').style.background = closest.hex;
+    tooltip.querySelector('.t-hex').textContent = closest.hex.toUpperCase();
+    tooltip.querySelector('.t-color-name').textContent = '';
+    tooltip.querySelector('.t-meta').textContent =
+      `${DESIGNERS[closest.designer].jp} ${DESIGNERS[closest.designer].en} — ${closest.year}`;
+
+    // Symbolism
+    const sym = classifyColor(closest.rgb);
+    const symEl = tooltip.querySelector('.t-symbol');
+    tooltip.querySelector('.t-color-name').textContent = sym.name;
+    if (sym.symbols && sym.symbols.length) {
+      let html = '<span class="t-label">Symbolism</span>';
+      html += sym.symbols.join(' · ');
+      if (sym.psych) {
+        html += '<span class="t-label">Psychology</span>';
+        html += sym.psych;
+      }
+      if (sym.cultures && sym.cultures.length) {
+        html += '<span class="t-label">Cultures</span>';
+        html += sym.cultures.join(', ');
+      }
+      symEl.innerHTML = html;
+      symEl.style.display = 'block';
+    } else {
+      symEl.style.display = 'none';
+    }
+
+    let tx = mx + 20, ty = my + 20;
+    if (tx + 240 > W) tx = mx - 260;
+    if (ty + 200 > H) ty = my - 220;
+    tooltip.style.left = tx + 'px';
+    tooltip.style.top = ty + 'px';
+
+    yearDisplay.textContent = closest.year;
+    yearDisplay.style.color = `rgba(255,255,255,0.06)`;
+  } else {
+    tooltip.style.display = 'none';
+    yearDisplay.style.color = 'rgba(255,255,255,0.03)';
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  mouseActive = false;
+  tooltip.style.display = 'none';
+  particles.forEach(p => { p.hover = false; });
+});
+
+// ─── Connection lines between nearby same-designer particles ───
+function drawConnections() {
+  ctx.lineWidth = 0.4;
+  for (let i = 0; i < particles.length; i++) {
+    const a = particles[i];
+    if (a.alpha < 0.2) continue;
+    for (let j = i + 1; j < particles.length; j++) {
+      const b = particles[j];
+      if (a.designer !== b.designer) continue;
+      if (b.alpha < 0.2) continue;
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      const maxD = 60;
+      if (d < maxD) {
+        const opacity = (1 - d / maxD) * 0.12 * Math.min(a.alpha, b.alpha);
+        ctx.strokeStyle = `rgba(255,255,255,${opacity})`;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+// ─── Timeline decorations ───
+function drawTimelineDecor() {
+  if (mode !== 'timeline') return;
+  ctx.save();
+  ctx.globalAlpha = 0.15;
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 0.5;
+  ctx.font = '10px Inter, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.textAlign = 'center';
+
+  for (let yr = 1960; yr <= 1993; yr += 5) {
+    const x = 80 + ((yr - 1960) / 33) * (W - 160);
+    ctx.beginPath();
+    ctx.moveTo(x, H * 0.15);
+    ctx.lineTo(x, H * 0.85);
+    ctx.stroke();
+    ctx.fillText(yr, x, H * 0.13);
+  }
+
+  // Designer labels on left
+  ctx.textAlign = 'right';
+  ctx.globalAlpha = 0.3;
+  Object.keys(DESIGNERS).forEach(key => {
+    const d = DESIGNERS[key];
+    const bandHeight = H * 0.12;
+    const bandY = H * 0.3 + d.idx * bandHeight * 1.4;
+    ctx.fillText(`${d.jp}  ${d.en.toUpperCase()}`, 70, bandY + 4);
+  });
+
+  ctx.restore();
+}
+
+// ─── Render Loop ───
+let t = 0;
+function frame() {
+  t += 0.016;
+  ctx.clearRect(0, 0, W, H);
+
+  // Subtle radial vignette
+  const vignette = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W,H)*0.7);
+  vignette.addColorStop(0, 'rgba(5,5,5,0)');
+  vignette.addColorStop(1, 'rgba(0,0,0,0.4)');
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, W, H);
+
+  if (mode !== 'network') {
+    drawTimelineDecor();
+  }
+
+  // Update & draw particles (always, but dimmed in network mode)
+  particles.forEach(p => p.update(t, mx, my, mode !== 'network' && mouseActive));
+  if (mode !== 'network') {
+    drawConnections();
+  }
+
+  // Sort by size for depth (smaller behind)
+  const sorted = [...particles].sort((a, b) => a.size - b.size);
+  sorted.forEach(p => p.draw(ctx));
+
+  // Graph in network mode
+  if (mode === 'network') {
+    simGraph();
+    drawGraph();
+  }
+
+  requestAnimationFrame(frame);
+}
+
+frame();
+</script>
+
+</body>
+</html>
