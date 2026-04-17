@@ -3287,7 +3287,7 @@ const gNodes = GRAPH_NODES.map((n, i) => {
     x: W/2 + Math.cos(a) * 200 + (Math.random()-0.5) * spread,
     y: H/2 + Math.sin(a) * 150 + (Math.random()-0.5) * spread,
     vx: 0, vy: 0,
-    radius: n.type === 'Event' || n.type === 'Movement' ? 18 : 12,
+    radius: n.type === 'Event' || n.type === 'Movement' ? 22 : 16,
     hover: false,
   };
 });
@@ -3309,30 +3309,15 @@ function resetGraphPositions() {
   });
 }
 
-// Track if any node is hovered — freezes sim for easy clicking
 let anyNodeHover = false;
-// Cooling factor — sim energy decays over time so it settles
-let graphCoolness = 1.0;
 
-function simGraph() {
-  // Freeze completely when hovering — user needs a stable target
-  if (anyNodeHover) {
-    gNodes.forEach(n => { n.vx *= 0.5; n.vy *= 0.5; });
-    return;
-  }
+// One simulation step
+function simGraphStep(strength) {
+  const k = 0.008 * strength;
+  const repulsion = 2500 * strength;
+  const damping = 0.72;
+  const centerPull = 0.006 * strength;
 
-  // Scale all forces by coolness — sim gently settles over time
-  const cool = graphCoolness;
-  graphCoolness = Math.max(0.15, graphCoolness * 0.997);
-
-  // Force simulation step — much gentler now
-  const k = 0.0015 * cool;     // attraction (was 0.005)
-  const repulsion = 900 * cool; // was 3000
-  const damping = 0.72;         // stronger damping (was 0.82)
-  const centerPull = 0.004 * cool; // was 0.008
-  const maxVel = 1.8 * cool;   // hard cap on velocity
-
-  // Repulsion between all nodes
   for (let i = 0; i < gNodes.length; i++) {
     for (let j = i+1; j < gNodes.length; j++) {
       const a = gNodes[i], b = gNodes[j];
@@ -3347,36 +3332,43 @@ function simGraph() {
     }
   }
 
-  // Edge attraction
   gEdges.forEach(e => {
     const dx = e.target.x - e.source.x;
     const dy = e.target.y - e.source.y;
-    const d = Math.sqrt(dx*dx + dy*dy);
-    const ideal = 95;
+    const d = Math.sqrt(dx*dx + dy*dy) || 1;
+    const ideal = 100;
     const f = (d - ideal) * k;
     const fx = dx/d * f, fy = dy/d * f;
     e.source.vx += fx; e.source.vy += fy;
     e.target.vx -= fx; e.target.vy -= fy;
   });
 
-  // Center gravity + velocity cap + integration
   gNodes.forEach(n => {
     n.vx += (W/2 - n.x) * centerPull;
     n.vy += (H/2 - n.y) * centerPull;
     n.vx *= damping;
     n.vy *= damping;
-    // Cap velocity so nothing ever slingshots
-    const v = Math.sqrt(n.vx*n.vx + n.vy*n.vy);
-    if (v > maxVel) {
-      n.vx = n.vx / v * maxVel;
-      n.vy = n.vy / v * maxVel;
-    }
     n.x += n.vx;
     n.y += n.vy;
-    // Bounds
     n.x = Math.max(80, Math.min(W-80, n.x));
     n.y = Math.max(80, Math.min(H-80, n.y));
   });
+}
+
+// Run simulation to convergence synchronously — called once when entering network mode
+function settleGraph() {
+  // Decaying strength over 400 iterations — fully converges before first render
+  for (let i = 0; i < 400; i++) {
+    const strength = Math.max(0.05, 1 - i / 400);
+    simGraphStep(strength);
+  }
+  // Zero all velocities — nodes become perfectly static
+  gNodes.forEach(n => { n.vx = 0; n.vy = 0; });
+}
+
+// No-op during frame loop — graph is fully static
+function simGraph() {
+  // Deliberately empty: layout is computed once in settleGraph()
 }
 
 function drawGraph() {
@@ -3491,7 +3483,7 @@ document.querySelectorAll('#mode-bar button').forEach(btn => {
       particles.forEach(p => p.setMode(mode));
       if (mode === 'network') {
         resetGraphPositions();
-        graphCoolness = 1.0;
+        settleGraph();
         particles.forEach(p => { p.targetAlpha = 0.04; });
       } else if (activeDesigner) {
         particles.forEach(p => {
