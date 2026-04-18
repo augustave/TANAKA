@@ -3059,8 +3059,8 @@ class Particle {
 
     // Physics
     this.phase = Math.random() * Math.PI * 2;
-    this.breathSpeed = 0.3 + Math.random() * 0.4;
-    this.driftAmp = 1.5 + Math.random() * 2;
+    this.breathSpeed = 0.2 + Math.random() * 0.3;
+    this.driftAmp = 0.4 + Math.random() * 0.6;
   }
 
   setMode(mode) {
@@ -3086,17 +3086,22 @@ class Particle {
     this.vx *= 0.88;
     this.vy *= 0.88;
 
-    // Mouse interaction
+    // Mouse interaction — gentle nudge only, no repulsion when close (so user can click)
     if (mouseActive) {
       const mdx = this.x - mx;
       const mdy = this.y - my;
       const md = Math.sqrt(mdx * mdx + mdy * mdy);
-      const influence = 120;
-      if (md < influence) {
-        const force = (1 - md / influence) * 3;
+      const influence = 100;
+      const deadZone = 45; // inside this radius, no push — so particles stay clickable
+      if (md < influence && md > deadZone) {
+        const t = (md - deadZone) / (influence - deadZone);
+        const force = (1 - t) * 0.6; // was 3 — 5× gentler
         this.vx += mdx / md * force;
         this.vy += mdy / md * force;
-        this.glowAlpha = Math.max(this.glowAlpha, (1 - md / influence) * 0.5);
+        this.glowAlpha = Math.max(this.glowAlpha, (1 - t) * 0.5);
+      } else if (md <= deadZone) {
+        // inside dead zone — still show glow but no push
+        this.glowAlpha = Math.max(this.glowAlpha, 0.5);
       }
     }
 
